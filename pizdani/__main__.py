@@ -114,6 +114,25 @@ class UpdateQueue:
         return await self.poller.queue.get()
 
 
+async def get_chat_members_count(client: Client, chat_id: str) -> int:
+    return await client.call('getChatMembersCount', chat_id=chat_id)
+
+
+async def send_voice(
+    client: Client,
+    voice: IO,
+    chat_id: str,
+    reply_to=None,
+    **kwargs,
+):
+    return await client.call(
+        'sendVoice', http_method='post',
+        chat_id=chat_id,
+        voice=voice, # (f'{uuid4()}.wav', voice),
+        reply_to_message_id=reply_to,
+    )
+
+
 @asynccontextmanager
 async def text_to_voice(text: str):
     with tempfile.NamedTemporaryFile(mode='rb', suffix='.ogg', delete=False) as ogg:
@@ -133,28 +152,28 @@ async def handle_update(client: Client, update):
     msg = update['message']
     # breakpoint()
     text = msg['text']
-    for e in msg['entities']:
-        if e['type'] == 'bot_command':
-            c = msg['text'][e['offset']:e['length']]
-            if c.startswith('/pizdani'):
-                text = text[e['offset'] + e['length']:]
-                break
-    else:
-        return
+
+    chat_id = msg['chat']['id']
+    cnt = await get_chat_members_count(client, chat_id=chat_id)
+    if cnt > 2:
+        for e in msg.get('entities', ()):
+            if e['type'] == 'bot_command':
+                c = msg['text'][e['offset']:e['length']]
+                if c.lower().startswith('/pizdani'):
+                    text = text[e['offset'] + e['length']:]
+                    break
+        else:
+            return
+
+
     message_id = msg['message_id']
     print(msg)
-    chat_id = msg['chat']['id']
     name = msg['from']['first_name']
     print(name, text)
 
     async with text_to_voice(text) as voice:
-        print(voice.name)
-        await client.call(
-            'sendVoice', http_method='post',
-            chat_id=chat_id,
-            voice=voice, # (f'{uuid4()}.wav', voice),
-            reply_to_message_id=message_id,
-        )
+        res = await send_voice(client, voice, chat_id, reply_to=message_id)
+        print(f'Sent: {res}')
 
 
 async def ratelimit(sem, func, *args, **kwargs):
