@@ -1,4 +1,4 @@
 export TG_BOT_TOKEN="<your-token-here>"
 export CACHE_DIR=".cache/"
-export SS_BINARY="/home/madbird/dev/balcon/balcon.exe"
+export SS_BINARY="../balcon/balcon.exe"
 export SS_COMMAND="wine \${CMD} -n Nicolai -f \${INP} -w \${OUT}"
