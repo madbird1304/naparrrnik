@@ -7,7 +7,7 @@ from aiohttp import FormData
 from functools import partial
 from contextlib import AsyncExitStack
 import tempfile
-from ..speech.synth import Synthizer
+from speech.synth import Synthizer
 from .config import TG_BOT_TOKEN, TG_URL_BASE, TG_URL_TEMPLATE
 from contextlib import asynccontextmanager
 from typing import IO
@@ -83,10 +83,10 @@ class Poller(asyncio.AbstractServer):
             updates = await self.client.call(
                 'getUpdates', offset=offset, timeout=15, limit=self.queue.maxsize,
             )
-            for update in updates:
-                models.Update.parse_obj(update)
+            for payload in updates:
+                update = models.Update.parse_obj(payload)
                 await self.queue.put(update)
-                offset = max(offset, update['update_id']+1)
+                offset = max(offset, update.update_id + 1)
 
 
     def __aiter__(self):
