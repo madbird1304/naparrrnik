@@ -7,13 +7,14 @@ from aiohttp import FormData
 from functools import partial
 from contextlib import AsyncExitStack
 import tempfile
-from speech.synth import Synthizer
+from ..speech.synth import Synthizer
 from .config import TG_BOT_TOKEN, TG_URL_BASE, TG_URL_TEMPLATE
 from contextlib import asynccontextmanager
 from typing import IO
-# from collections.
+from .models import enums, models
 
 log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 KEYWORDS = ['пиздани']
 
@@ -83,6 +84,7 @@ class Poller(asyncio.AbstractServer):
                 'getUpdates', offset=offset, timeout=15, limit=self.queue.maxsize,
             )
             for update in updates:
+                models.Update.parse_obj(update)
                 await self.queue.put(update)
                 offset = max(offset, update['update_id']+1)
 
@@ -131,7 +133,7 @@ async def send_voice(
     return await client.call(
         'sendVoice', http_method='post',
         chat_id=chat_id,
-        voice=voice, # (f'{uuid4()}.wav', voice),
+        voice=voice,
         reply_to_message_id=reply_to,
     )
 
@@ -151,28 +153,34 @@ async def text_to_voice(text: str):
             yield f
 
 
-async def handle_update(client: Client, update):
-    log.debug('update: %s', update)
-    msg = update['message']
+async def handle_update(client: Client, update: models.Update):
+    log.debug('update: %s', update.json(indent=2))
 
-    text = msg.get('text', '')
+    msg = update.message or update.edited_message
+    if msg is None:
+        return
 
-    chat_id = msg['chat']['id']
+
+
+    text = msg.text
+
+    chat_id = msg.chat.id
+
     cnt = await get_chat_members_count(client, chat_id=chat_id)
     if cnt > 2:
-        for e in msg.get('entities', ()):
-            if e['type'] == 'bot_command':
-                c = msg['text'][e['offset']:e['length']]
+        for entity in msg.entities:
+            if entity.type == enums.EntityType.BOT_COMMAND:
+                c = msg.text[entity.offset:entity.length]
                 if c.lower().startswith('/pizdani'):
-                    text = text[e['offset'] + e['length']:]
+                    text = text[entity.offset + entity.length:]
                     break
         else:
             return
 
 
-    message_id = msg['message_id']
     print(msg)
-    name = msg['from']['first_name']
+    message_id = msg.message_id
+    name = msg.from_.first_name
     print(name, text)
     if not text:
         return
