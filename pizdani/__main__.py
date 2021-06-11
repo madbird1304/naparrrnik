@@ -1,5 +1,6 @@
 import io
 import os
+import logging
 import asyncio
 import aiohttp
 from aiohttp import FormData
@@ -11,6 +12,8 @@ from .config import TG_BOT_TOKEN, TG_URL_BASE, TG_URL_TEMPLATE
 from contextlib import asynccontextmanager
 from typing import IO
 # from collections.
+
+log = logging.getLogger(__name__)
 
 KEYWORDS = ['пиздани']
 
@@ -64,7 +67,7 @@ class Client:
 
 
 class Poller(asyncio.AbstractServer):
-    def __init__(self, client: Client, maxsize: int = 1):
+    def __init__(self, client: Client, maxsize: int = 100):
         self.client = client
         self.task = None
         self.queue = asyncio.Queue(maxsize=maxsize)
@@ -149,9 +152,10 @@ async def text_to_voice(text: str):
 
 
 async def handle_update(client: Client, update):
+    log.debug('update: %s', update)
     msg = update['message']
-    # breakpoint()
-    text = msg['text']
+
+    text = msg.get('text', '')
 
     chat_id = msg['chat']['id']
     cnt = await get_chat_members_count(client, chat_id=chat_id)
@@ -170,7 +174,8 @@ async def handle_update(client: Client, update):
     print(msg)
     name = msg['from']['first_name']
     print(name, text)
-
+    if not text:
+        return
     async with text_to_voice(text) as voice:
         res = await send_voice(client, voice, chat_id, reply_to=message_id)
         print(f'Sent: {res}')
