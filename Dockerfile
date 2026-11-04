@@ -23,11 +23,11 @@ RUN pip3 install --no-cache-dir -r /app/requirements.txt
 
 ADD vendor/wineprefix.tar.gz /opt/
 ADD vendor/balcon.tar.gz /opt/
-COPY patch-msvcirt.py /tmp/patch-msvcirt.py
-RUN python3 /tmp/patch-msvcirt.py /opt/wineprefix/drive_c/windows/system32/msvcirt.dll \
-        "/opt/wineprefix/drive_c/Program Files/Elan/msvcirt.dll" \
-    && rm /tmp/patch-msvcirt.py \
-    && chown -R naparrnik:naparrnik /opt/wineprefix
+# Genuine Microsoft msvcirt.dll 6.00.8168 from the VC6 redistributable. The engine
+# ends each sentence with `<< ends`, and wine's own msvcirt drops that NUL: the
+# engine then speaks stale buffer contents as extra words.
+COPY ["vendor/msvcirt.dll", "/opt/wineprefix/drive_c/Program Files/Elan/msvcirt.dll"]
+RUN chown -R naparrnik:naparrnik /opt/wineprefix
 
 COPY config.py /app/config.py
 COPY pizdani /app/pizdani
@@ -36,7 +36,7 @@ COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 # Wine derives its ANSI codepage from the locale: without ru_RU the voice reads
 # the cp1251 input as garbage.
-ENV LC_ALL=ru_RU.UTF-8 LANG=ru_RU.UTF-8 PYTHONIOENCODING=utf-8 PYTHONUNBUFFERED=1 \
+ENV LC_ALL=ru_RU.UTF-8 LANG=ru_RU.UTF-8 PYTHONUNBUFFERED=1 \
     WINEPREFIX=/opt/wineprefix WINEARCH=win32 WINEDEBUG=-all WINEDLLOVERRIDES="mscoree,mshtml=;msvcirt=n,b" \
     CACHE_DIR=/tmp/naparrnik SS_BINARY=/opt/balcon/balcon.exe DISPLAY=:99
 

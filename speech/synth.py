@@ -73,6 +73,6 @@ class Synthizer:
 
 
     async def process(self, text: str):
-        fi = tempf(mode='wt', suffix='.txt', encoding='cp1251', errors='replace')
+        fi = tempf(mode='wt', suffix='.txt', encoding='cp1251')
         fo = tempf(mode='rb', suffix='.wav')
         return await asyncio.to_thread(self.run, fi, fo, text)
