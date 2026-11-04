@@ -17,6 +17,7 @@ class ChatType(AutoNameEnum):
 
 
 class EntityType(AutoNameEnum):
+    UNKNOWN = auto()
     MENTION = auto()
     HASHTAG = auto()
     CASHTAG = auto()
@@ -33,3 +34,7 @@ class EntityType(AutoNameEnum):
     PRE = auto()
     TEXT_LINK = auto()
     TEXT_MENTION = auto()
+
+    @classmethod
+    def _missing_(cls, value):
+        return cls.UNKNOWN

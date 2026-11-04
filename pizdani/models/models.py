@@ -61,6 +61,19 @@ class Message(APIModel):
     edit_date: Optional[datetime]
     from_: User = Field(alias='from')
 
+class InlineQuery(APIModel):
+    id: str
+    query: str
+    from_: User = Field(alias='from')
+
+class ChosenInlineResult(APIModel):
+    result_id: str
+    query: str
+    inline_message_id: Optional[str]
+    from_: User = Field(alias='from')
+
 class Update(APIModel):
     message: Optional[Message]
     edited_message: Optional[Message]
+    inline_query: Optional[InlineQuery]
+    chosen_inline_result: Optional[ChosenInlineResult]

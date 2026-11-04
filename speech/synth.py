@@ -65,7 +65,7 @@ class Synthizer:
             command = [Template(s).safe_substitute(env) for s in COMMAND]
             fi.write(text)
             fi.flush()
-            print(command, env)
+            print(command)
             proc =  subprocess.Popen(command, env=env)
             proc.wait()
             res = fo.read()
