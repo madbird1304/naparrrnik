@@ -188,15 +188,15 @@ async def upload_to_storage(client: Client, ogg: IO, text: str) -> tuple:
         await asyncio.to_thread(
             os.system, f'ffmpeg -y -loglevel error -i {ogg.name} -b:a 64k {mp3.name}'
         )
-        mp3.seek(0)
-        audio = await client.call(
-            'sendAudio', http_method='post',
-            chat_id=INLINE_STORAGE_CHAT,
-            audio=mp3,
-            title=text[:64],
-            performer='Напарррник',
-            disable_notification='true',
-        )
+        with open(mp3.name, mode='rb') as f:
+            audio = await client.call(
+                'sendAudio', http_method='post',
+                chat_id=INLINE_STORAGE_CHAT,
+                audio=f,
+                title=text[:64],
+                performer='Напарррник',
+                disable_notification='true',
+            )
     await delete_message(client, INLINE_STORAGE_CHAT, audio['message_id'])
     return voice['voice']['file_id'], audio['audio']['file_id']
 
