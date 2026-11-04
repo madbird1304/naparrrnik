@@ -65,7 +65,7 @@ class Synthizer:
             command = [Template(s).safe_substitute(env) for s in COMMAND]
             fi.write(text)
             fi.flush()
-            print(command, env)
+            print(command)
             proc =  subprocess.Popen(command, env=env)
             proc.wait()
             res = fo.read()
@@ -73,6 +73,6 @@ class Synthizer:
 
 
     async def process(self, text: str):
-        fi = tempf(mode='wt', suffix='.txt', encoding='cp1251')
+        fi = tempf(mode='wt', suffix='.txt', encoding='cp1251', errors='replace')
         fo = tempf(mode='rb', suffix='.wav')
         return await asyncio.to_thread(self.run, fi, fo, text)

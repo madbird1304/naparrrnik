@@ -45,8 +45,7 @@ class Client:
         return self.template_url.format(base=TG_URL_BASE, token=self.token, method=method)
 
     async def request(self, method, url: str, **params: object) -> object:
-        print(method, url, params)
-        # print(url, params)
+        print(method, url.rsplit('/', 1)[-1], params)
         if method == 'get':
             request = self.session.get(url, params=params)
         elif method == 'post':
@@ -80,13 +79,22 @@ class Poller(asyncio.AbstractServer):
     async def serve_forever(self):
         offset = 0
         while True:
-            updates = await self.client.call(
-                'getUpdates', offset=offset, timeout=15, limit=self.queue.maxsize,
-            )
+            try:
+                updates = await self.client.call(
+                    'getUpdates', offset=offset, timeout=15, limit=self.queue.maxsize,
+                )
+            except (aiohttp.ClientError, asyncio.TimeoutError, ClientError) as exc:
+                log.warning('getUpdates failed: %r', exc)
+                await asyncio.sleep(5)
+                continue
             for payload in updates:
-                update = models.Update.parse_obj(payload)
+                offset = max(offset, payload['update_id'] + 1)
+                try:
+                    update = models.Update.parse_obj(payload)
+                except ValueError:
+                    log.exception('skipping bad update: %s', payload)
+                    continue
                 await self.queue.put(update)
-                offset = max(offset, update.update_id + 1)
 
 
     def __aiter__(self):
@@ -147,7 +155,7 @@ async def text_to_voice(text: str):
             await asyncio.to_thread(wav.flush)
             await asyncio.to_thread(
                 # os.system, f'oggenc -q 3 -o {ogg.name} {wav.name}'
-                os.system, f'opusenc --speech {wav.name} {ogg.name}'
+                os.system, f'ffmpeg -y -loglevel error -i {wav.name} -c:a libopus -b:a 32k -application voip {ogg.name}'
             )
         with open(ogg.name, mode='rb') as f:
             yield f
@@ -168,7 +176,7 @@ async def handle_update(client: Client, update: models.Update):
 
     cnt = await get_chat_members_count(client, chat_id=chat_id)
     if cnt > 2:
-        for entity in msg.entities:
+        for entity in msg.entities or []:
             if entity.type == enums.EntityType.BOT_COMMAND:
                 c = msg.text[entity.offset:entity.length]
                 if c.lower().startswith('/pizdani'):
