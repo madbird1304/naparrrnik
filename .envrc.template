@@ -2,3 +2,7 @@ export TG_BOT_TOKEN="<your-token-here>"
 export CACHE_DIR=".cache/"
 export SS_BINARY="../balcon/balcon.exe"
 export SS_COMMAND="wine \${CMD} -n Nicolai -f \${INP} -w \${OUT}"
+
+# Inline mode: chat for temporary uploads and allowed user ids (comma separated).
+export INLINE_STORAGE_CHAT=""
+export INLINE_USERS=""
