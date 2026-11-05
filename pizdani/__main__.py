@@ -24,6 +24,13 @@ KEYWORDS = ['пиздани']
 BOT_URL = 'https://t.me/naparrrnik_bot'
 VOICE_CACHE_SIZE = 1000
 
+# The voice's signature: doubled Р. A capital stays single, so the engine does not
+# read a run of them as an abbreviation.
+STRETCH = str.maketrans({'р': 'рр', 'Р': 'Рр'})
+
+# Emoji -> spoken name. Anything not listed is cut, see prepare_text.
+EMOJI_NAMES = {}
+
 # Synthesis is CPU heavy, run it strictly one at a time.
 synth_lock = asyncio.Lock()
 # query text -> voice file_id, lets inline answer with a real voice message.
@@ -164,8 +171,19 @@ async def delete_message(client: Client, chat_id: str, message_id: int):
     )
 
 
+def prepare_text(text: str) -> str:
+    """Turn a message into what the engine reads, cutting all it can't encode."""
+    for emoji, name in EMOJI_NAMES.items():
+        text = text.replace(emoji, f' {name} ')
+    text = text.translate(STRETCH).encode('cp1251', 'ignore').decode('cp1251')
+    if not text.strip():
+        raise ValueError('nothing left to say')
+    return text
+
+
 @asynccontextmanager
 async def text_to_voice(text: str):
+    text = prepare_text(text)
     with tempfile.NamedTemporaryFile(mode='rb', suffix='.ogg', delete=False) as ogg:
         with tempfile.NamedTemporaryFile(mode='wb', suffix='.wav') as wav:
             async with synth_lock:
